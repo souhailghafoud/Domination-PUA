@@ -1,6 +1,6 @@
 /*******************************************************************************************************
 **
-** @brief     XstractiK Domination Project  -  Player-v0.1.0 Firmware (Milstone 1)
+** @brief     XstractiK Domination Project  -  Player-v0.1.0 Firmware
 **
 ** @copyright Copyright © 2021 GHS. All rights reserved.
 ** 
@@ -61,13 +61,18 @@
 #define PLAYER_STATUS_TASK_PRIORITY     (tskIDLE_PRIORITY + 1)      // Priority level
 #define PLAYER_STATUS_TASK_CORE         APP_CORE                    // CPU core ID
 
-#define MAX_CENTRALS                    4
+#define CENTRAL_STATUS_TASK_STACK       (1024 * 3)                  // Stack size in bytes
+#define CENTRAL_STATUS_TASK_PRIORITY    (tskIDLE_PRIORITY + 2)      // Priority level
+#define CENTRAL_STATUS_TASK_CORE        APP_CORE                    // CPU core ID
+
+#define MAX_CENTRALS                    3
 #define CENTRAL_QUEUE_LEN               MAX_CENTRALS                // Central devices Queue length
 
 #define MAX_RSSI_COUNT                  10
 #define RSSI_RADIUS                     -65                         // dBm
 
-#define LORA_RX_BUFF_LEN                32
+#define LORA_PACKET_LEN                32
+#define LORA_PACKET_ARG_LEN            3
 
 #define HIGH			                1
 #define LOW 			                0
@@ -122,6 +127,45 @@ typedef enum {
 } player_status_t;
 
 
+/*!
+ * @brief CP id.
+ */
+typedef enum {
+    CP_A = 0,
+    CP_B,
+    CP_C
+} cp_id_t;
+
+
+/*!
+ * @brief CP status.
+ */
+typedef enum {
+    CP_CAPTURED = 0,
+    CP_CAPTURING    
+} cp_status_t;
+
+
+/*!
+ * @brief Team id.
+ */
+typedef enum {
+    TEAM_A = 0,
+    TEAM_B,
+    TEAM_NONE
+} team_id_t;
+
+
+/*!
+ * @brief LoRa packet args.
+ */
+typedef enum {
+    PACKET_ARG_CP_ID = 0,
+    PACKET_ARG_CP_STATUS,
+    PACKET_ARG_DOMINANT_TEAM
+} lora_packet_args_t;
+
+
 
 /*************************************** Structure Definitions ****************************************/
 
@@ -135,6 +179,7 @@ typedef struct {
     uint8_t rssi_counter;
 } central_dev_t;
 
+
 /*!
  * @brief Player info.
  */
@@ -144,10 +189,22 @@ typedef struct {
 } player_info_t;
 
 
+/*!
+ * @brief CP info.
+ */
+typedef struct {
+    cp_id_t id;
+    cp_status_t status;
+    team_id_t dominant_team;
+} cp_info_t;
+
+
 
 /***************************************** Static Variables *******************************************/
 
 static QueueHandle_t s_central_queue = NULL;            // Central devices Queue handle
+static SemaphoreHandle_t s_lora_irq_semaphore = NULL;   // LoRa IRQ Semaphore handle
+
 
 static esp_ble_scan_params_t ble_scan_params = {
     .scan_type              = BLE_SCAN_TYPE_ACTIVE,
@@ -158,6 +215,7 @@ static esp_ble_scan_params_t ble_scan_params = {
     .scan_duplicate         = BLE_SCAN_DUPLICATE_DISABLE
 };
 
+
 static esp_ble_adv_params_t ble_adv_params = {
     .adv_int_min        = 0x20,
     .adv_int_max        = 0x40,
@@ -166,6 +224,7 @@ static esp_ble_adv_params_t ble_adv_params = {
     .channel_map        = ADV_CHNL_ALL,
     .adv_filter_policy  = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
 };
+
 
 static uint8_t raw_adv_data[20] = {
     /* Len:2, Type:1 (flags), Data:6 */
@@ -182,6 +241,24 @@ static uint8_t raw_adv_data[20] = {
 
 /*********************************************** ISRs *************************************************/
 
+/*!
+ * @brief This interrupt service routine is used to .
+ * 
+ * @param[in] arg  :Not used.
+ * 
+ * @return Nothing.
+ */
+static void lora_irq_isr(void *arg)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;  // Higher priority task flag
+
+    xSemaphoreGiveFromISR(s_lora_irq_semaphore, &xHigherPriorityTaskWoken);
+
+    /* Wake up higher priority task immediately */
+    if (xHigherPriorityTaskWoken) {
+        portYIELD_FROM_ISR();
+    }
+}
 
 
 
@@ -315,7 +392,6 @@ static void player_status_task(void *arg)
 {
     esp_bd_addr_t central_addr_list[MAX_CENTRALS] = {{0x9C, 0x9C, 0x1F, 0xC7, 0x33, 0x22},
                                                      {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-                                                     {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
                                                      {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}};
     central_dev_t central[MAX_CENTRALS] = {0};
     central_dev_t central_temp = {0};
@@ -413,6 +489,76 @@ static void player_status_task(void *arg)
         printf(" \n");*/
 
         delay_ms(500);
+    }
+}
+
+
+/*!
+ * @brief This internal task is used to..
+ * 
+ * @param[in] arg  :Not used.
+ * 
+ * @return Nothing.
+ */
+void central_status_task(void *p)
+{
+    cp_info_t cp = {0};
+    uint8_t lora_packet[LORA_PACKET_LEN] = {0};
+    uint8_t lora_packet_arg[LORA_PACKET_ARG_LEN] = {0};
+    int lora_packet_len = 0;
+    lora_packet_args_t packet_arg_index = 0;
+
+    /* Create binary semaphore for LoRa Rx events */
+    s_lora_irq_semaphore = xSemaphoreCreateBinary();
+
+    /* Set inpout mode for LoRa Rx Pins */
+    gpio_set_direction(PIN_LORA_DIO0, GPIO_MODE_INPUT);
+    
+    /* Set rising edge interrupt type for LoRa Rx Pins */
+    gpio_set_intr_type(PIN_LORA_DIO0, GPIO_INTR_POSEDGE);
+
+    /* Setup ISR for LoRa Rx Pins */
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL3);
+    gpio_isr_handler_add(PIN_LORA_DIO0, lora_irq_isr, (void *)PIN_LORA_DIO0);
+
+    lora_init();
+    lora_set_frequency(915e6);
+    lora_enable_crc();
+
+    while (1) {
+        /* Set into receive mode */
+        lora_receive(); 
+        
+        /* Wait for LoRa IRQ */
+        xSemaphoreTake(s_lora_irq_semaphore, portMAX_DELAY);
+
+        lora_packet_len = lora_receive_packet(lora_packet, sizeof(lora_packet));
+
+        printf("Received packet : %s\n\n", lora_packet);
+
+        /* Parse LoRa packet */
+        for (uint8_t i = 0; i < lora_packet_len; i++) {
+            /* Retreive LoRa packet args
+             *  arg[0] : cp_id -> 1 or 2 or 3 (A, B, C)
+             *  arg[1] : cp_status -> 0 or 1 (Captured, Capturing)
+             *  arg[2] : dominant_team -> 0 or 1 (A, B)
+             * */
+            if (':' == lora_packet[i]) {
+                lora_packet_arg[packet_arg_index] = lora_packet[i+1];
+                packet_arg_index++;
+            }
+        }
+
+        cp.id = lora_packet_arg[PACKET_ARG_CP_ID];
+        cp.status = lora_packet_arg[PACKET_ARG_CP_STATUS];
+        cp.dominant_team = lora_packet_arg[PACKET_ARG_DOMINANT_TEAM];
+
+        //TODO
+        // Display CP info
+
+        memset(lora_packet, 0, sizeof(lora_packet));
+        memset(lora_packet_arg, 0, sizeof(lora_packet_arg));
+        packet_arg_index = 0;
     }
 }
 
