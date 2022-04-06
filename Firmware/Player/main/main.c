@@ -1,6 +1,6 @@
 /*******************************************************************************************************
 **
-** @brief     XstractiK Domination Project -- XPv0.1.0 Firmware (Milstone 1)
+** @brief     XstractiK Domination Project  -  Player-v0.1.0 Firmware (Milstone 1)
 **
 ** @copyright Copyright © 2021 GHS. All rights reserved.
 ** 
@@ -45,43 +45,49 @@
 /* IMU */
 #include "MPU6050.h"
 
+/* LoRa */
+#include "lora.h"
+
 
 
 /********************************************* Constants **********************************************/
 
-#define FIRMWARE_VERSION            "0.1.0"                     // Firmware version
+#define FIRMWARE_VERSION                "0.1.0"                     // Firmware version
 
-#define PRO_CORE                    0                           // ESP32 Core 0
-#define APP_CORE                    1                           // ESP32 Core 1
+#define PRO_CORE                        0                           // ESP32 Core 0
+#define APP_CORE                        1                           // ESP32 Core 1
 
-#define TASK_STACK                  (1024 * 3)                  // Stack size in bytes
-#define TASK_PRIORITY               (tskIDLE_PRIORITY + 2)      // Priority level
-#define TASK_CORE                   APP_CORE                    // CPU core ID
+#define PLAYER_STATUS_TASK_STACK        (1024 * 3)                  // Stack size in bytes
+#define PLAYER_STATUS_TASK_PRIORITY     (tskIDLE_PRIORITY + 1)      // Priority level
+#define PLAYER_STATUS_TASK_CORE         APP_CORE                    // CPU core ID
 
-#define CENTRAL_QUEUE_LEN           20                          // Central devices Queue length
+#define MAX_CENTRALS                    4
+#define CENTRAL_QUEUE_LEN               MAX_CENTRALS                // Central devices Queue length
 
-#define MAX_CENTRALS                4
-#define MAX_RSSI_COUNT              10
+#define MAX_RSSI_COUNT                  10
+#define RSSI_RADIUS                     -65                         // dBm
 
-#define RSSI_RADIUS                 -65                         // dBm
+#define LORA_RX_BUFF_LEN                32
 
-#define HIGH			            1
-#define LOW 			            0
+#define HIGH			                1
+#define LOW 			                0
 
 /* I2C pins */
-#define PIN_I2C_SCL                 GPIO_NUM_32
-#define PIN_I2C_SDA                 GPIO_NUM_33
+#define PIN_I2C_SCL                     GPIO_NUM_32
+#define PIN_I2C_SDA                     GPIO_NUM_33
+
 /* SPI pins */
-#define PIN_SPI_MOSI                GPIO_NUM_23
-#define PIN_SPI_MISO                GPIO_NUM_19
-#define PIN_SPI_SCK                 GPIO_NUM_18
-#define PIN_SPI_SS                  GPIO_NUM_5
+#define PIN_SPI_MOSI                    GPIO_NUM_23
+#define PIN_SPI_MISO                    GPIO_NUM_19
+#define PIN_SPI_CLK                     GPIO_NUM_18
+
 /* LoRa pins */
-#define PIN_LORA_DIO0               GPIO_NUM_27
-#define PIN_LORA_RESET              GPIO_NUM_14
+#define PIN_LORA_DIO0                   GPIO_NUM_27
+#define PIN_LORA_RESET                  GPIO_NUM_14
+
 /* LED pins */
-#define PIN_LED_GREEN               GPIO_NUM_26
-#define PIN_LED_RED                 GPIO_NUM_27
+#define PIN_LED_GREEN                   GPIO_NUM_25
+#define PIN_LED_RED                     GPIO_NUM_26
 
 
 
@@ -168,14 +174,13 @@ static uint8_t raw_adv_data[20] = {
     0x02, 0x0a, 0xeb,
     /* Len:3, Type:3 (Complete List of 16-bit Service Class UUIDs), Data: FF 00 */
     0x03, 0x03, 0xFF, 0x01,
-    /* Len:6, Type:9 (Complete Local Name) */
-    0x06, 0x09, 'X', 'P', '-', '0', '1'
+    /* Len:5, Type:9 (Complete Local Name) */
+    0x05, 0x09, 'P', '-', '0', '1'
 };
 
 
 
 /*********************************************** ISRs *************************************************/
-
 
 
 
@@ -306,7 +311,7 @@ void set_led_color(led_color_t led_color)
  * 
  * @return Nothing.
  */
-static void task(void *arg)
+static void player_status_task(void *arg)
 {
     esp_bd_addr_t central_addr_list[MAX_CENTRALS] = {{0x9C, 0x9C, 0x1F, 0xC7, 0x33, 0x22},
                                                      {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
@@ -417,7 +422,7 @@ static void task(void *arg)
 
 void app_main(void)
 {
-    printf("\n\nXstractiK Domination Project -- XPv%s\n\n", FIRMWARE_VERSION);
+    printf("\n\nXstractiK Domination Project  -  Player-v%s\n\n", FIRMWARE_VERSION);
 
     gpio_set_direction(PIN_LED_GREEN, GPIO_MODE_OUTPUT);
     gpio_set_direction(PIN_LED_RED, GPIO_MODE_OUTPUT);
@@ -456,14 +461,24 @@ void app_main(void)
     esp_ble_gap_set_scan_params(&ble_scan_params);
         
     /* Create a task for.. */
-    xTaskCreatePinnedToCore(&task,
-                            "Task",
-                            TASK_STACK,
+    xTaskCreatePinnedToCore(&central_status_task,
+                            "Central status task",
+                            CENTRAL_STATUS_TASK_STACK,
                             NULL,
-                            TASK_PRIORITY,
+                            CENTRAL_STATUS_TASK_PRIORITY,
                             NULL,
-                            TASK_CORE);
+                            CENTRAL_STATUS_TASK_CORE);
+    
+    /* Create a task for.. */
+    xTaskCreatePinnedToCore(&player_status_task,
+                            "Player status task",
+                            PLAYER_STATUS_TASK_STACK,
+                            NULL,
+                            PLAYER_STATUS_TASK_PRIORITY,
+                            NULL,
+                            PLAYER_STATUS_TASK_CORE);
 }
+
 
 
 /******************************************************************************************************/
