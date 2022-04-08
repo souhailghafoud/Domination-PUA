@@ -1,5 +1,5 @@
-#ifndef _I2C_H_   /* Include guard */
-#define _I2C_H_
+#ifndef I2C_H       /* Include guard */
+#define I2C_H
 
 
 
@@ -8,10 +8,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <driver/i2c.h>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
-
-#include <driver/i2c.h>
 
 
 

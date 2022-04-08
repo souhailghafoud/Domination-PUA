@@ -1,7 +1,7 @@
 
 /************************************* Header Includes *************************************/
 
-#include "I2C.h"
+#include "i2c.h"
 
 
 
@@ -170,7 +170,7 @@ esp_err_t i2c_read_data(uint8_t addr, const uint8_t *reg, uint8_t *data, uint32_
       return ESP_FAIL;
     }
 
-    if (i2c_master_write_byte(cmd, ( addr << 1 ) | I2C_MASTER_READ, true) != ESP_OK) {
+    if (i2c_master_write_byte(cmd, (addr << 1) | I2C_MASTER_READ, true) != ESP_OK) {
       i2c_cmd_link_delete(cmd);
       return ESP_FAIL;
     }
