@@ -1,13 +1,13 @@
 /*******************************************************************************************************
 **
-** @brief     XstractiK Domination Project  -  Player-v0.1.0 Firmware
+** @brief     XstractiK Domination Project  -  Player-v0.2.0 Firmware
 **
 ** @copyright Copyright © 2021 GHS. All rights reserved.
 ** 
 ** @file	  main.cpp
 ** @author    Souhail Ghafoud
-** @date	  November 05, 2021
-** @version	  0.1.0
+** @date	  April 08, 2022
+** @version	  0.2.0
 **
 *******************************************************************************************************/
 
@@ -52,7 +52,7 @@
 
 /********************************************* Constants **********************************************/
 
-#define FIRMWARE_VERSION                "0.1.0"                     // Firmware version
+#define FIRMWARE_VERSION                "0.2.0"                     // Firmware version
 
 #define PRO_CORE                        0                           // ESP32 Core 0
 #define APP_CORE                        1                           // ESP32 Core 1
@@ -61,9 +61,9 @@
 #define PLAYER_STATUS_TASK_PRIORITY     (tskIDLE_PRIORITY + 1)      // Priority level
 #define PLAYER_STATUS_TASK_CORE         APP_CORE                    // CPU core ID
 
-#define CENTRAL_STATUS_TASK_STACK       (1024 * 3)                  // Stack size in bytes
-#define CENTRAL_STATUS_TASK_PRIORITY    (tskIDLE_PRIORITY + 2)      // Priority level
-#define CENTRAL_STATUS_TASK_CORE        APP_CORE                    // CPU core ID
+#define CP_STATUS_TASK_STACK            (1024 * 3)                  // Stack size in bytes
+#define CP_STATUS_TASK_PRIORITY         (tskIDLE_PRIORITY + 2)      // Priority level
+#define CP_STATUS_TASK_CORE             APP_CORE                    // CPU core ID
 
 #define MAX_CENTRALS                    3
 #define CENTRAL_QUEUE_LEN               MAX_CENTRALS                // Central devices Queue length
@@ -71,8 +71,8 @@
 #define MAX_RSSI_COUNT                  10
 #define RSSI_RADIUS                     -65                         // dBm
 
-#define LORA_PACKET_LEN                32
-#define LORA_PACKET_ARG_LEN            3
+#define LORA_PACKET_LEN                 40
+#define LORA_PACKET_ARG_LEN             3
 
 #define HIGH			                1
 #define LOW 			                0
@@ -131,7 +131,7 @@ typedef enum {
  * @brief CP id.
  */
 typedef enum {
-    CP_A = 0,
+    CP_A = 1,
     CP_B,
     CP_C
 } cp_id_t;
@@ -500,7 +500,7 @@ static void player_status_task(void *arg)
  * 
  * @return Nothing.
  */
-void central_status_task(void *p)
+void cp_status_task(void *arg)
 {
     cp_info_t cp = {0};
     uint8_t lora_packet[LORA_PACKET_LEN] = {0};
@@ -521,6 +521,7 @@ void central_status_task(void *p)
     gpio_install_isr_service(ESP_INTR_FLAG_LEVEL3);
     gpio_isr_handler_add(PIN_LORA_DIO0, lora_irq_isr, (void *)PIN_LORA_DIO0);
 
+    /* Init LoRa module */
     lora_init();
     lora_set_frequency(915e6);
     lora_enable_crc();
@@ -549,13 +550,16 @@ void central_status_task(void *p)
             }
         }
 
+        /* Save CP info received via LoRa comms */
         cp.id = lora_packet_arg[PACKET_ARG_CP_ID];
         cp.status = lora_packet_arg[PACKET_ARG_CP_STATUS];
         cp.dominant_team = lora_packet_arg[PACKET_ARG_DOMINANT_TEAM];
 
-        //TODO
-        // Display CP info
+        /*!
+         * @todo Send the CP info above to another task (display on LCD)
+         */
 
+        /* Reset LoRa arrays and variable used for comms */
         memset(lora_packet, 0, sizeof(lora_packet));
         memset(lora_packet_arg, 0, sizeof(lora_packet_arg));
         packet_arg_index = 0;
@@ -568,54 +572,59 @@ void central_status_task(void *p)
 
 void app_main(void)
 {
+    esp_err_t esp_status = ESP_OK;
+
     printf("\n\nXstractiK Domination Project  -  Player-v%s\n\n", FIRMWARE_VERSION);
 
+    /* Init LED */
     gpio_set_direction(PIN_LED_GREEN, GPIO_MODE_OUTPUT);
     gpio_set_direction(PIN_LED_RED, GPIO_MODE_OUTPUT);
     set_led_color(LED_OFF);
     
     /* Init I2C Peripheral */
     if (ESP_OK != i2c_init(PIN_I2C_SDA, PIN_I2C_SCL)) {
-        printf("I2C init error\n");
+        printf("I2C init error\n\n");
     }
 
+    /* Init NVS */
     ESP_ERROR_CHECK(nvs_flash_init());
 
+    /* Free unused BT Classic memory */
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
+    /* BT controller configuration */
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-    esp_bt_controller_init(&bt_cfg);
-    esp_bt_controller_enable(ESP_BT_MODE_BLE);
+    esp_bt_controller_init(&bt_cfg);            //Initialize BT controller
+    esp_bt_controller_enable(ESP_BT_MODE_BLE);  // Enable BT controller
     
-    esp_bluedroid_init();
-    esp_bluedroid_enable();
+    esp_bluedroid_init();   // Init and alloc the resource for bluetooth
+    esp_bluedroid_enable(); // Enable bluetooth
 
-    esp_err_t status = ESP_OK;
-
-    //register the scan callback function to the gap module
-    status = esp_ble_gap_register_callback(esp_gap_cb);
-    if (status != ESP_OK) {
-        printf("\ngap register error: %s\n", esp_err_to_name(status));
+    /* Register the scan callback function to the gap module */
+    esp_status = esp_ble_gap_register_callback(esp_gap_cb);
+    if (esp_status != ESP_OK) {
+        printf("Gap register error: %s\n\n", esp_err_to_name(esp_status));
     }
     
-    status = esp_ble_gap_config_adv_data_raw(raw_adv_data, sizeof(raw_adv_data));
-    if (status != ESP_OK){
-        printf("\nConfig adv data failed: %s\n", esp_err_to_name(status));
+    /* Set advertising data */
+    esp_status = esp_ble_gap_config_adv_data_raw(raw_adv_data, sizeof(raw_adv_data));
+    if (esp_status != ESP_OK){
+        printf("Config adv data failed: %s\n\n", esp_err_to_name(esp_status));
     }
     
-    /* set scan parameters */
+    /* Set scan parameters */
     esp_ble_gap_set_scan_params(&ble_scan_params);
         
-    /* Create a task for.. */
-    xTaskCreatePinnedToCore(&central_status_task,
-                            "Central status task",
-                            CENTRAL_STATUS_TASK_STACK,
+    /* Create a task to receive CP status via LoRa comms */
+    xTaskCreatePinnedToCore(&cp_status_task,
+                            "CP status task",
+                            CP_STATUS_TASK_STACK,
                             NULL,
-                            CENTRAL_STATUS_TASK_PRIORITY,
+                            CP_STATUS_TASK_PRIORITY,
                             NULL,
-                            CENTRAL_STATUS_TASK_CORE);
+                            CP_STATUS_TASK_CORE);
     
-    /* Create a task for.. */
+    /* Create a task for player status monitoring */
     xTaskCreatePinnedToCore(&player_status_task,
                             "Player status task",
                             PLAYER_STATUS_TASK_STACK,

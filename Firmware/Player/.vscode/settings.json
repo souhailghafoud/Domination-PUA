@@ -1,6 +1,6 @@
 {
   "C_Cpp.intelliSenseEngine": "Tag Parser",
-  "idf.portWin": "COM13",
+  "idf.portWin": "COM8",
   "files.associations": {
     "esp_gap_ble_api.h": "c",
     "freertos.h": "c",
