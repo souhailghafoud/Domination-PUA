@@ -6,7 +6,7 @@
 <setting keepoldvectorfont="yes"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="yes" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="16" name="Bottom" color="1" fill="1" visible="yes" active="yes"/>
@@ -89,7 +89,7 @@
 </package3d>
 </packages3d>
 <symbols>
-<symbol name="MPU6050" urn="urn:adsk.eagle:symbol:35457001/1">
+<symbol name="MPU6050" urn="urn:adsk.eagle:symbol:35457001/2">
 <wire x1="0" y1="2.54" x2="0" y2="-20.32" width="0.3048" layer="94"/>
 <wire x1="0" y1="-20.32" x2="20.32" y2="-20.32" width="0.3048" layer="94"/>
 <wire x1="20.32" y1="-20.32" x2="20.32" y2="2.54" width="0.3048" layer="94"/>
@@ -101,23 +101,23 @@
 <wire x1="10.16" y1="-10.16" x2="8.89" y2="-11.43" width="0.3048" layer="94"/>
 <wire x1="10.16" y1="-10.16" x2="11.43" y2="-11.43" width="0.3048" layer="94"/>
 <text x="9.398" y="-2.794" size="1.4224" layer="94">GY-521</text>
-<text x="8.382" y="-5.334" size="1.4224" layer="94">ITG/MPU</text>
+<text x="8.382" y="-5.334" size="1.4224" layer="94">MPU6050</text>
 <text x="16.51" y="-16.002" size="1.778" layer="94">x</text>
 <text x="12.7" y="-10.16" size="1.778" layer="94">y</text>
 <text x="0" y="3.302" size="1.778" layer="95">&gt;NAME</text>
 <text x="0" y="-22.86" size="1.778" layer="95">&gt;VALUE</text>
-<pin name="VCC" x="-5.08" y="0" length="middle"/>
-<pin name="GND" x="-5.08" y="-2.54" length="middle"/>
-<pin name="SCL" x="-5.08" y="-5.08" length="middle"/>
-<pin name="SDA" x="-5.08" y="-7.62" length="middle"/>
-<pin name="XDA" x="-5.08" y="-10.16" length="middle"/>
-<pin name="XCL" x="-5.08" y="-12.7" length="middle"/>
-<pin name="ADO" x="-5.08" y="-15.24" length="middle"/>
-<pin name="INT" x="-5.08" y="-17.78" length="middle"/>
+<pin name="VCC" x="-5.08" y="0" length="middle" direction="pwr"/>
+<pin name="GND" x="-5.08" y="-17.78" length="middle" direction="pwr"/>
+<pin name="SCL" x="-5.08" y="-2.54" length="middle" direction="out"/>
+<pin name="SDA" x="-5.08" y="-5.08" length="middle"/>
+<pin name="XDA" x="-5.08" y="-7.62" length="middle"/>
+<pin name="XCL" x="-5.08" y="-10.16" length="middle"/>
+<pin name="ADO" x="-5.08" y="-12.7" length="middle" direction="in"/>
+<pin name="INT" x="-5.08" y="-15.24" length="middle" direction="out"/>
 </symbol>
 </symbols>
 <devicesets>
-<deviceset name="GY-521" prefix="MOD" urn="urn:adsk.eagle:component:35457003/2">
+<deviceset name="GY-521" prefix="MOD" urn="urn:adsk.eagle:component:35457003/3">
 <description>GY-521 PIM for MPU6050  &lt;a href="https://pricing.snapeda.com/parts/GY-521/GODREAM%20FORDREAM%20CO.%2C%20LIMITED/view-part?ref=eda"&gt;Check availability&lt;/a&gt;</description>
 <gates>
 <gate name="G$1" symbol="MPU6050" x="-2.54" y="5.08"/>

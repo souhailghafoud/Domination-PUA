@@ -115,7 +115,7 @@
 </package3d>
 </packages3d>
 <symbols>
-<symbol name="MCP73831T-3ACI/OT" urn="urn:adsk.eagle:symbol:35462485/2">
+<symbol name="MCP73831T" urn="urn:adsk.eagle:symbol:35462485/3">
 <wire x1="-10.16" y1="7.62" x2="-10.16" y2="-7.62" width="0.4064" layer="94"/>
 <wire x1="-10.16" y1="-7.62" x2="7.62" y2="-7.62" width="0.4064" layer="94"/>
 <wire x1="7.62" y1="-7.62" x2="7.62" y2="7.62" width="0.4064" layer="94"/>
@@ -130,10 +130,10 @@
 </symbol>
 </symbols>
 <devicesets>
-<deviceset name="MCP73831T-3ACI/OT" prefix="U" urn="urn:adsk.eagle:component:35462487/3">
+<deviceset name="MCP73831T" prefix="U" urn="urn:adsk.eagle:component:35462487/4">
 <description>Li-Polymer Charge Management Controllers, SOT23-5 &lt;a href="https://pricing.snapeda.com/parts/MCP73831T-3ACI/OT/Microchip/view-part?ref=eda"&gt;Check availability&lt;/a&gt;</description>
 <gates>
-<gate name="A" symbol="MCP73831T-3ACI/OT" x="0" y="0"/>
+<gate name="A" symbol="MCP73831T" x="0" y="0"/>
 </gates>
 <devices>
 <device name="" package="SOT95P270X145-5N">
