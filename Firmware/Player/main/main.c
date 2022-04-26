@@ -1,13 +1,13 @@
 /*******************************************************************************************************
 **
-** @brief     XstractiK Domination Project  -  Player-v0.2.0 Firmware
+** @brief     XstractiK Domination Project  -  Player-v0.3.0 Firmware
 **
 ** @copyright Copyright © 2021 GHS. All rights reserved.
 ** 
 ** @file	  main.cpp
 ** @author    Souhail Ghafoud
-** @date	  April 08, 2022
-** @version	  0.2.0
+** @date	  April 26, 2022
+** @version	  0.3.0
 **
 *******************************************************************************************************/
 
@@ -26,6 +26,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 
+/* ESP32 */
 #include "driver/gpio.h"
 
 /* NVS */
@@ -48,17 +49,20 @@
 /* LoRa */
 #include "lora.h"
 
+/* Vibration motor */
+#include "vibration.h"
+
 
 
 /********************************************* Constants **********************************************/
 
-#define FIRMWARE_VERSION                "0.2.0"                     // Firmware version
+#define FIRMWARE_VERSION                "0.3.0"                     // Firmware version
 
 #define PRO_CORE                        0                           // ESP32 Core 0
 #define APP_CORE                        1                           // ESP32 Core 1
 
 #define PLAYER_STATUS_TASK_STACK        (1024 * 3)                  // Stack size in bytes
-#define PLAYER_STATUS_TASK_PRIORITY     (tskIDLE_PRIORITY + 1)      // Priority level
+#define PLAYER_STATUS_TASK_PRIORITY     (tskIDLE_PRIORITY + 3)      // Priority level
 #define PLAYER_STATUS_TASK_CORE         APP_CORE                    // CPU core ID
 
 #define CP_STATUS_TASK_STACK            (1024 * 3)                  // Stack size in bytes
@@ -78,8 +82,8 @@
 #define LOW 			                0
 
 /* I2C pins */
-#define PIN_I2C_SCL                     GPIO_NUM_32
-#define PIN_I2C_SDA                     GPIO_NUM_33
+#define PIN_I2C_SCL                     GPIO_NUM_22
+#define PIN_I2C_SDA                     GPIO_NUM_21
 
 /* SPI pins */
 #define PIN_SPI_MOSI                    GPIO_NUM_23
@@ -87,12 +91,16 @@
 #define PIN_SPI_CLK                     GPIO_NUM_18
 
 /* LoRa pins */
-#define PIN_LORA_DIO0                   GPIO_NUM_27
-#define PIN_LORA_RESET                  GPIO_NUM_14
+#define PIN_LORA_SS                     GPIO_NUM_5
+#define PIN_LORA_DIO0                   GPIO_NUM_17
+#define PIN_LORA_RESET                  GPIO_NUM_16
 
-/* LED pins */
-#define PIN_LED_GREEN                   GPIO_NUM_25
-#define PIN_LED_RED                     GPIO_NUM_26
+/* Vibration Motor pins */
+#define PIN_VIBRATION_EN                GPIO_NUM_4
+
+/* Battery Management pins */
+#define PIN_FUELGAUGE_ALERT             GPIO_NUM_2
+#define PIN_CHARGER_STAT                GPIO_NUM_15
 
 
 
@@ -347,37 +355,6 @@ void delay_ms(uint32_t period_ms)
 }
 
 
-/*!
- * @brief This public function is used to set the LED color.
- *
- * @param[in] led_color  :Enumeration instance of led_color_t.
- *
- * @return Nothing.
- */
-void set_led_color(led_color_t led_color)
-{
-    /* Parse led_color */
-    switch (led_color) {
-        case LED_GREEN:
-            /* Set LED green */
-            gpio_set_level(PIN_LED_GREEN, HIGH);
-            gpio_set_level(PIN_LED_RED, LOW);
-            break; 
-        case LED_RED: 
-            /* Set LED red */
-            gpio_set_level(PIN_LED_RED, HIGH);
-            gpio_set_level(PIN_LED_GREEN, LOW);
-            break;
-        case LED_OFF: 
-            /* Set LED OFF */  
-            gpio_set_level(PIN_LED_GREEN, LOW);
-            gpio_set_level(PIN_LED_RED, LOW);
-        default:    
-            break;
-    }
-}
-
-
 
 /****************************************** App Core Tasks ********************************************/
 
@@ -396,8 +373,10 @@ static void player_status_task(void *arg)
     central_dev_t central[MAX_CENTRALS] = {0};
     central_dev_t central_temp = {0};
     uint8_t central_index = 0;
+    bool b_central_found = false;
     player_info_t player = {0};
     MPU6050_sensor_t mpu6050 = {0};
+    vibration_motor_t vibration = {0};
     
     /* Create central devices queue */
     s_central_queue = xQueueCreate(CENTRAL_QUEUE_LEN, sizeof(central_dev_t));
@@ -407,7 +386,11 @@ static void player_status_task(void *arg)
         printf("MPU6050 I2C error\n");
     }
 
-    set_led_color(LED_GREEN);
+    /* Init vibration motor */
+    vibration.enable_io_num = PIN_VIBRATION_EN;
+    vibration.nb_times = 1;     // 1 time
+    vibration.lenght_ms = 500;  // 0.5 second
+    vibration_init(vibration);
 
     while (1) {
         /* Fetch new accelerometer data from MPU6050 */
@@ -417,65 +400,62 @@ static void player_status_task(void *arg)
 
         /* Check if player's arm is raised to indicate life status */
         if ((0.350f) <= mpu6050.accel_data[Y]) {
-            /* Player death.
-             * Make sure player is not already dead so this is run  
-             * only on a player status change
-             * */
-            if (PLAYER_DEAD != player.status) {
-                esp_ble_gap_stop_advertising(); // Stop advertising
-                player.status = PLAYER_DEAD;    // Set player status to dead
-                player.death_count++;           // Increase player's death count
-                set_led_color(LED_RED);
-            }
-        }
-        else {
-            /* Player resurection.
-             * Make sure player is not already alive so this is run only 
-             * on a player status change
-             * */
-            if (PLAYER_ALIVE != player.status) {
-                /* Start scanning for central devices (0 means scan permanently) */
-                esp_ble_gap_start_scanning(0);
+            /* Player is dead */
+            esp_ble_gap_stop_advertising(); // Stop advertising
+            player.status = PLAYER_DEAD;    // Set player status to dead
+            player.death_count++;           // Increase player's death count
 
-                /* Loop until player is near a central device to come back to life */
-                while (PLAYER_DEAD == player.status) {
-                    /* Wait for new central device then dequeue */
-                    xQueueReceive(s_central_queue, &central_temp, portMAX_DELAY);
+            /* Vibrate player's device to indicate death */
+            vibration.nb_times = 1;     // 1 time
+            vibration.lenght_ms = 1000; // 1 second
+            vibration_enable(vibration);
+        
+            /* Start scanning for central devices (0 means scan permanently) */
+            esp_ble_gap_start_scanning(0);
 
-                    /* Search through all central devices */
-                    for (central_index = 0; central_index < MAX_CENTRALS; central_index++) {
-                        /* Find the corresponding central within the address list */
-                        if (0 == memcmp(central_addr_list[central_index], central_temp.address, ESP_BD_ADDR_LEN)) {
-                            /* Sum RSSI value and increase counter */
-                            central[central_index].rssi += central_temp.rssi;
-                            central[central_index].rssi_counter++;
+            /* Loop until player is near a central device to come back to life */
+            while (PLAYER_DEAD == player.status) {
+                /* Wait for central device then dequeue */
+                xQueueReceive(s_central_queue, &central_temp, portMAX_DELAY);
 
-                            /* RSSI values ready to be averaged */
-                            if (MAX_RSSI_COUNT == central[central_index].rssi_counter) {
-                                /* Average RSSI values */
-                                central[central_index].rssi = (float)central[central_index].rssi / (float)central[central_index].rssi_counter;
+                b_central_found = false; // Reset variable
 
-                                /* Determine if the central is in range or not */
-                                if (RSSI_RADIUS <= central[central_index].rssi) {
-                                    /* Central in range.
-                                     * Make sure beacon is not already in range so this is   
-                                     * run only on a proximity status change 
-                                     * */
-                                    if (CENTRAL_IN_RANGE != central[central_index].proximity) {
-                                        /* Stop scanning and start advertising */
-                                        esp_ble_gap_stop_scanning();
-                                        esp_ble_gap_start_advertising(&ble_adv_params);
-                                        /* Player is back to life (Save new status) */
-                                        player.status = PLAYER_ALIVE;
-                                        set_led_color(LED_GREEN);
-                                    }
+                /* Search through all central devices */
+                for (central_index = 0; b_central_found != true || central_index < MAX_CENTRALS; central_index++) {
+                    /* Find the corresponding central within the address list */
+                    if (0 == memcmp(central_addr_list[central_index], central_temp.address, ESP_BD_ADDR_LEN)) {
+                        /* Sum RSSI value and increase counter */
+                        central[central_index].rssi += central_temp.rssi;
+                        central[central_index].rssi_counter++;
+
+                        /* RSSI values ready to be averaged */
+                        if (MAX_RSSI_COUNT == central[central_index].rssi_counter) {
+                            /* Average RSSI values */
+                            central[central_index].rssi = (float)central[central_index].rssi / (float)central[central_index].rssi_counter;
+
+                            /* Determine if the central is in range or not */
+                            if (RSSI_RADIUS <= central[central_index].rssi) {
+                                /* Central in range.
+                                    * Make sure beacon is not already in range so this is   
+                                    * run only on a proximity status change 
+                                    * */
+                                if (CENTRAL_IN_RANGE != central[central_index].proximity) {
+                                    /* Player is back to life (Save new status) */
+                                    player.status = PLAYER_ALIVE;
+                                    /* Vibrate player's device to indicate revival */
+                                    vibration.nb_times = 2;     // 2 time
+                                    vibration.lenght_ms = 1000; // 1 second
+                                    vibration_enable(vibration);
+                                    /* Stop scanning and start advertising */
+                                    esp_ble_gap_stop_scanning();
+                                    esp_ble_gap_start_advertising(&ble_adv_params);
                                 }
-                                /* Reset RSSI value and counter */
-                                central[central_index].rssi = 0;
-                                central[central_index].rssi_counter = 0;
                             }
-                            break;  // Central device found, break from for() loop
+                            /* Reset RSSI value and counter */
+                            central[central_index].rssi = 0;
+                            central[central_index].rssi_counter = 0;
                         }
+                        b_central_found = true; // Central device found
                     }
                 }
             }
@@ -488,7 +468,7 @@ static void player_status_task(void *arg)
         printf("Player death count = %d\n", player.death_count); 
         printf(" \n");*/
 
-        delay_ms(500);
+        delay_ms(250);
     }
 }
 
@@ -507,6 +487,7 @@ void cp_status_task(void *arg)
     uint8_t lora_packet_arg[LORA_PACKET_ARG_LEN] = {0};
     int lora_packet_len = 0;
     lora_packet_args_t packet_arg_index = 0;
+    vibration_motor_t vibration = {0};
 
     /* Create binary semaphore for LoRa Rx events */
     s_lora_irq_semaphore = xSemaphoreCreateBinary();
@@ -525,6 +506,11 @@ void cp_status_task(void *arg)
     lora_init();
     lora_set_frequency(915e6);
     lora_enable_crc();
+
+    /* Init vibration motor struct variables */
+    vibration.enable_io_num = PIN_VIBRATION_EN;
+    vibration.nb_times = 2;     // 2 time
+    vibration.lenght_ms = 1000; // 1 second
 
     while (1) {
         /* Set into receive mode */
@@ -557,7 +543,10 @@ void cp_status_task(void *arg)
 
         /*!
          * @todo Send the CP info above to another task (display on LCD)
-         */
+         * */
+
+        /* Vibrate player's device to indicate a CP status change */
+        vibration_enable(vibration);
 
         /* Reset LoRa arrays and variable used for comms */
         memset(lora_packet, 0, sizeof(lora_packet));
@@ -575,11 +564,6 @@ void app_main(void)
     esp_err_t esp_status = ESP_OK;
 
     printf("\n\nXstractiK Domination Project  -  Player-v%s\n\n", FIRMWARE_VERSION);
-
-    /* Init LED */
-    gpio_set_direction(PIN_LED_GREEN, GPIO_MODE_OUTPUT);
-    gpio_set_direction(PIN_LED_RED, GPIO_MODE_OUTPUT);
-    set_led_color(LED_OFF);
     
     /* Init I2C Peripheral */
     if (ESP_OK != i2c_init(PIN_I2C_SDA, PIN_I2C_SCL)) {
