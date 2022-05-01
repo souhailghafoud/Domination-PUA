@@ -1,18 +1,32 @@
 
 /****************************************** Header includes *******************************************/
 
+/* std Lib */
+#include <stdint.h>         // For uint8_t definition 
+#include <stdbool.h>        // For true/false definition
+
+/* I2C */
+#include "i2c.h"
+
+/* MPU6050 */
 #include "MPU6050.h"
 
 
 
 /***************************************** Private Functions ******************************************/
 
+/*!
+ * @brief This private function is used to write in MPU6050 registers.
+ */
 static esp_err_t MPU6050_write_reg(uint8_t reg, uint8_t *data, uint32_t len)
 {
     return i2c_send_data(MPU6050_I2C_ADDR, &reg, data, len);
 }
 
 
+/*!
+ * @brief This private function is used to read MPU6050 registers.
+ */
 static esp_err_t MPU6050_read_reg(uint8_t reg, uint8_t *data, uint32_t len)
 {
     return i2c_read_data(MPU6050_I2C_ADDR, &reg, data, len);

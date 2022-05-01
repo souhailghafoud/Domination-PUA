@@ -2,29 +2,16 @@
 #define VIBRATION_H
 
 
-/****************************************** Header includes *******************************************/
-
-/* FreeRTOS */
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
-
-/* ESP32 */
-#include "driver/gpio.h"
-
-#include "vibration.h"
-
-
 
 /*************************************** Structure Definitions ****************************************/
 
 /*!
- * @brief Vibration motor.
+ * @brief Vibration motor data.
  */
 typedef struct {
     gpio_num_t enable_io_num;
-    uint8_t nb_times;
-    uint32_t lenght_ms;
+    uint8_t nb_time;
+    uint32_t duration_ms;
 } vibration_motor_t;
 
 
@@ -43,7 +30,7 @@ void vibration_init(vibration_motor_t vibration);
 
 /*!
  * @brief This public function is used to enable vibration for a
- *        given lenght and number of time.
+ *        given duration and number of time.
  * 
  * @param[in] vibration  :Structure instance of vibration_motor_t.
  *

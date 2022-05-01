@@ -3,15 +3,9 @@
 
 
 
-/************************************* Header Includes *************************************/
+/****************************************** Header includes *******************************************/
 
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <driver/i2c.h>
-
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
+#include "esp_err.h"
 
 
 
@@ -21,13 +15,13 @@
  * @brief This public function is used to initialize the I2C port
  *        as master.
  * 
- * @param[in] sda  :Pin for I2C data line
- * @param[in] scl  :Pin for I2C clock line
+ * @param[in] sda_io_num  :GPIO number for I2C data line
+ * @param[in] scl_io_num  :GPIO number for I2C clock line
  *
  * @return Result of the function execution status.
  * @retval ESP_OK -> Success  /  ESP_FAIL -> Error
  */
-esp_err_t i2c_init(int8_t sda, int8_t scl);
+esp_err_t i2c_init(gpio_num_t sda_io_num, gpio_num_t scl_io_num)
 
 
 /*!

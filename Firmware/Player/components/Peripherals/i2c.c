@@ -1,6 +1,19 @@
 
 /************************************* Header Includes *************************************/
 
+/* std Lib */
+#include <stdint.h>         // For uint8_t definition 
+#include <stdbool.h>        // For true/false definition
+
+/* FreeRTOS */
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
+/* ESP32 */
+#include <driver/gpio.h>  // GPIO
+#include <driver/i2c.h>   // I2C
+
+/* I2C */
 #include "i2c.h"
 
 
@@ -13,7 +26,7 @@
 
 
 
-/************************************* Static Variables **************************************/
+/************************************* Static Variables ************************************/
 
 static SemaphoreHandle_t s_i2c_mutex = NULL;    // I2C mutex Semaphore reference
 
@@ -41,7 +54,7 @@ static SemaphoreHandle_t s_i2c_mutex = NULL;    // I2C mutex Semaphore reference
  * @brief This public function is used to initialize the I2C port
  *        as master.
  */
-esp_err_t i2c_init(int8_t sda, int8_t scl)
+esp_err_t i2c_init(gpio_num_t sda_io_num, gpio_num_t scl_io_num)
 {
   i2c_config_t conf;
 
@@ -207,4 +220,4 @@ esp_err_t i2c_read_data(uint8_t addr, const uint8_t *reg, uint8_t *data, uint32_
 }
 
 
-/*********************************************************************************************/
+/******************************************************************************************/

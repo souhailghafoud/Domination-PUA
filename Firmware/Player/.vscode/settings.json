@@ -22,7 +22,10 @@
     "type_traits": "c",
     "utility": "c",
     "*.ipp": "c",
-    "complex": "c"
+    "complex": "c",
+    "mpu6050.h": "c",
+    "thread": "c",
+    "random": "c"
   },
   "idf.flashType": "UART",
   "idf.adapterTargetName": "esp32"
