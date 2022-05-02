@@ -9,7 +9,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
-/* ESP32 */
+/* ESP32 drivers */
 #include <driver/gpio.h>  // GPIO
 #include <driver/i2c.h>   // I2C
 
@@ -54,7 +54,7 @@ static SemaphoreHandle_t s_i2c_mutex = NULL;    // I2C mutex Semaphore reference
  * @brief This public function is used to initialize the I2C port
  *        as master.
  */
-esp_err_t i2c_init(gpio_num_t sda_io_num, gpio_num_t scl_io_num)
+esp_err_t i2c_init(int sda_io_num, int scl_io_num)
 {
   i2c_config_t conf;
 
@@ -62,9 +62,9 @@ esp_err_t i2c_init(gpio_num_t sda_io_num, gpio_num_t scl_io_num)
   if (s_i2c_mutex == NULL) {return ESP_FAIL;}
 
   conf.mode = I2C_MODE_MASTER;
-  conf.sda_io_num = sda;
+  conf.sda_io_num = sda_io_num;
   conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-  conf.scl_io_num = scl;
+  conf.scl_io_num = scl_io_num;
   conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
   conf.master.clk_speed = 800000;
 

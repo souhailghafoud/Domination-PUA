@@ -5,7 +5,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 
-/* ESP32 */
+/* ESP32 drivers */
 #include "driver/gpio.h"
 
 #include "vibration.h"

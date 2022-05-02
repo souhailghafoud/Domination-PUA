@@ -21,7 +21,7 @@
  * @return Result of the function execution status.
  * @retval ESP_OK -> Success  /  ESP_FAIL -> Error
  */
-esp_err_t i2c_init(gpio_num_t sda_io_num, gpio_num_t scl_io_num)
+esp_err_t i2c_init(int sda_io_num, int scl_io_num);
 
 
 /*!
