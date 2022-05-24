@@ -1,4 +1,4 @@
 idf_component_register(
-    SRCS "main.c"
+    SRCS "ble.c"
     INCLUDE_DIRS "."
-)
+    REQUIRES bt Peripherals)

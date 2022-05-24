@@ -1,4 +1,4 @@
 idf_component_register(
-    SRCS "lora.c"
+    SRCS "vibration.c"
     INCLUDE_DIRS "."
     REQUIRES driver esp32)

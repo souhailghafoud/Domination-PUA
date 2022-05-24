@@ -3,13 +3,9 @@
 
 
 
-/************************************* Header Includes *************************************/
+/****************************************** Header includes *******************************************/
 
-/* std Lib */
-#include <stdint.h>         // For uint8_t definition 
-#include <stdbool.h>        // For true/false definition
-
-#include "i2c.h"
+#include "esp_err.h"
 
 
 
@@ -140,7 +136,7 @@ typedef enum {
 
 
 
-/***************************************** Public Functions *******************************************/
+/*********************************** Function Prototype Declarations **********************************/
 
 /*!
  * @brief This public function is used to initialize the MPU6050 sensor.
@@ -168,5 +164,5 @@ esp_err_t MPU6050_read_accel(MPU6050_sensor_t *mpu6050);
 
 #endif  /* End of include guard */
 
-/*********************************************************************************************/
+/******************************************************************************************************/
 
