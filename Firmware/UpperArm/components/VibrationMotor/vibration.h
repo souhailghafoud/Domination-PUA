@@ -23,7 +23,7 @@ typedef struct {
  * 
  * @param[in] vibration  :Structure instance of vibration_motor_t.
  *
- * @return Nothing
+ * @return Nothing.
  */
 void vibration_init(vibration_motor_t vibration);
 
@@ -34,7 +34,7 @@ void vibration_init(vibration_motor_t vibration);
  * 
  * @param[in] vibration  :Structure instance of vibration_motor_t.
  *
- * @return Nothing
+ * @return Nothing.
  */
 void vibration_enable(vibration_motor_t vibration);
 

@@ -37,7 +37,7 @@ static QueueHandle_t s_vibration_queue = NULL;            // Vibration data Queu
 /****************************************** Private Functions *****************************************/
 
 /*!
- * @brief This public function is used to delay a task for a period
+ * @brief This private function is used to delay a task for a period
  *        of time in milliseconds.
  */
 static void delay_ms(uint32_t period_ms)
@@ -85,6 +85,10 @@ static void vibration_task(void *arg)
 
 /*!
  * @brief This public function is used to initialize the vibration motor.
+ * 
+ * @param[in] vibration  :Structure instance of vibration_motor_t.
+ *
+ * @return Nothing.
  */
 void vibration_init(vibration_motor_t vibration)
 {
@@ -114,6 +118,10 @@ void vibration_init(vibration_motor_t vibration)
 /*!
  * @brief This public function is used to enable the vibration for a
  *        given number of times and lenght of time.
+ * 
+ * @param[in] vibration  :Structure instance of vibration_motor_t.
+ *
+ * @return Nothing.
  */
 void vibration_enable(vibration_motor_t vibration)
 {
