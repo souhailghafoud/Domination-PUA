@@ -68,7 +68,7 @@ esp_err_t ble_stop_scanning(void);
 /*!
  * @brief This public function is used to start advertising.
  * 
- * @param[in] vibration  :Structure instance of vibration_motor_t.
+ * @param[in] adv_params  :Structure instance of esp_ble_adv_params_t.
  *
  * @return Result of the function execution status.
  * @retval ESP_OK -> Success  /  ESP_FAIL -> Error
@@ -91,7 +91,7 @@ esp_err_t ble_stop_advertising(void);
  * @brief This public function is used to get the scan result
  *        of BLE devices nearby.
  * 
- * @param[in] vibration  :Structure instance of vibration_motor_t.
+ * @param[in,out] ble_scan_result  :Structure instance of ble_scan_result_t.
  *
  * @return Result of the function execution status.
  * @retval ESP_OK -> Success  /  ESP_FAIL -> Error

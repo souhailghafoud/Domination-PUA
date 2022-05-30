@@ -41,7 +41,12 @@ static EventGroupHandle_t s_ble_event_group = NULL;     // BLE EvenGroup handle
 /***************************************** Private Functions ******************************************/
 
 /*!
- * @brief This private function is used for BLE radio events
+ * @brief This private function is used for BLE radio events.
+ * 
+ * @param[in] vibration  :Structure instance of vibration_motor_t.
+ *
+ * @return Result of the function execution status.
+ * @retval ESP_OK -> Success  /  ESP_FAIL -> Error
  */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
@@ -140,6 +145,12 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
 
 /*!
  * @brief This public function is used to initialize the BLE radio.
+ * 
+ * @param[in] scan_params   :Structure instance of esp_ble_scan_params_t.
+ * @param[in] raw_adv_data  :Raw advertising data.
+ *
+ * @return Result of the function execution status.
+ * @retval ESP_OK -> Success  /  ESP_FAIL -> Error
  */
 esp_err_t ble_init(esp_ble_scan_params_t scan_params, uint8_t *raw_adv_data)
 {    
@@ -199,6 +210,11 @@ esp_err_t ble_init(esp_ble_scan_params_t scan_params, uint8_t *raw_adv_data)
 /*!
  * @brief This public function is used to start scanning for other
  *        BLE devices for a given duration in second.
+ * 
+ * @param[in] duration_sec  :Scan duration in seconds.
+ *
+ * @return Result of the function execution status.
+ * @retval ESP_OK -> Success  /  ESP_FAIL -> Error
  */
 esp_err_t ble_start_scanning(uint32_t duration_sec)
 {
@@ -229,6 +245,11 @@ esp_err_t ble_start_scanning(uint32_t duration_sec)
 /*!
  * @brief This public function is used to stop scanning for other
  *        BLE devices.
+ * 
+ * @param  :Nothing.
+ *
+ * @return Result of the function execution status.
+ * @retval ESP_OK -> Success  /  ESP_FAIL -> Error
  */
 esp_err_t ble_stop_scanning(void)
 {
@@ -258,6 +279,11 @@ esp_err_t ble_stop_scanning(void)
 
 /*!
  * @brief This public function is used to start advertising.
+ * 
+ * @param[in] vibration  :Structure instance of vibration_motor_t.
+ *
+ * @return Result of the function execution status.
+ * @retval ESP_OK -> Success  /  ESP_FAIL -> Error
  */
 esp_err_t ble_start_advertising(esp_ble_adv_params_t adv_params)
 {
@@ -287,6 +313,11 @@ esp_err_t ble_start_advertising(esp_ble_adv_params_t adv_params)
 
 /*!
  * @brief This public function is used to stop advertising.
+ * 
+ * @param  :Nothing.
+ *
+ * @return Result of the function execution status.
+ * @retval ESP_OK -> Success  /  ESP_FAIL -> Error
  */
 esp_err_t ble_stop_advertising(void)
 {
@@ -317,6 +348,11 @@ esp_err_t ble_stop_advertising(void)
 /*!
  * @brief This public function is used to get the scan result
  *        of BLE devices nearby.
+ * 
+ * @param[in,out] ble_scan_result  :Structure instance of ble_scan_result_t.
+ *
+ * @return Result of the function execution status.
+ * @retval ESP_OK -> Success  /  ESP_FAIL -> Error
  */
 esp_err_t ble_get_scan_result(ble_scan_result_t *ble_scan_result)
 {	
