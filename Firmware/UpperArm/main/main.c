@@ -1,8 +1,8 @@
 /*******************************************************************************************************
 **
-** @brief     XstractiK Domination Project  -  Player-v0.3.0 Firmware
+** @brief     eMMG Tech  -  PUA-v0.3.0 Firmware
 **
-** @copyright Copyright © 2022 GHS. All rights reserved.
+** @copyright Copyright © 2022 eMMG Tech. All rights reserved.
 ** 
 ** @file	  main.cpp
 ** @author    Souhail Ghafoud
@@ -604,7 +604,7 @@ void app_main(void)
 {
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     printf("**********************************************\n");
-    printf("XstractiK Domination Project  -  Player-v%s\n", FIRMWARE_VERSION);
+    printf("eMMG Tech  -  PUA-v%s\n", FIRMWARE_VERSION);
     printf("**********************************************\n\n");
     
     /* Init I2C Peripheral */
